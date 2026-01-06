@@ -16,4 +16,9 @@ app.get("/", (req, res) => {
   res.json({ message: "PayG API running" });
 });
 
+//adding test routes
+const testRoutes = require("./routes/test.routes");
+
+app.use("/api/test", testRoutes);
+
 module.exports = app;
