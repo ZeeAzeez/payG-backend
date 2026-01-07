@@ -1,47 +1,84 @@
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
+const Wallet = require("../models/Wallet");
+const mongoose = require("mongoose");
 
 const signup = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { email, username, phone, password } = req.body;
 
+    //email validation
     if (!email || !username || !phone || !password) {
+      await session.abortTransaction();
+      session.endSession();
+
       return res.status(400).json({
         message: "All fields are required",
       });
     }
 
+    //checking is the user already exists
     const existingUser = await User.findOne({
       $or: [{ email }, { phone }, { username }],
     });
 
     if (existingUser) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(409).json({
         message: "User with these details already exists",
       });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    // const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await User.create({
-      email,
-      username,
-      phone,
-      password: hashedPassword,
-    });
+    //creating the user
+    const user = await User.create(
+      [
+        {
+          email,
+          username,
+          phone,
+          password: hashedPassword,
+        },
+      ],
+      { session }
+    );
+
+    //creating the wallet inside the transaction
+    await Wallet.create(
+      [
+        {
+          user: user[0]._id,
+          balance: 0,
+          currency: "NGN",
+        },
+      ],
+      { session }
+    );
+
+    //committing the transaction
+    await session.commitTransaction();
+    session.endSession();
 
     return res.status(201).json({
       message: "Signup successful",
       user: {
-        id: user._id,
-        email: user.email,
-        username: user.username,
-        phone: user.phone,
+        id: user[0]._id,
+        email: user[0].email,
+        username: user[0].username,
+        phone: user[0].phone,
       },
     });
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+
     console.error("Signup error:", error);
     return res.status(500).json({
       message: "Server error",
