@@ -2,6 +2,7 @@ const Wallet = require("../models/Wallet");
 
 const getWalletBalance = async (req, res) => {
   try {
+    //the auth middleware sets the req.user
     const userId = req.user._id;
 
     const wallet = await Wallet.findOne({ user: userId });
@@ -22,8 +23,8 @@ const getWalletBalance = async (req, res) => {
       message: "Server error",
     });
   }
+};
 
-  module.exports = {
-    getWalletBalance,
-  };
+module.exports = {
+  getWalletBalance,
 };
