@@ -71,7 +71,102 @@ const fundWallet = async (req, res) => {
   }
 };
 
+const User = require("../models/User");
+
+const transferWallet = async (req, res) => {
+  try {
+    const senderId = req.user._id;
+    const { toUsername, amount, description } = req.body;
+
+    // 1. Basic validation
+    if (!toUsername || !amount || amount <= 0 || !description) {
+      return res.status(400).json({
+        message: "toUsername, amount and description are required",
+      });
+    }
+
+    // 2. Find sender wallet
+    const senderWallet = await Wallet.findOne({ user: senderId });
+
+    if (!senderWallet) {
+      return res.status(404).json({
+        message: "Sender wallet not found",
+      });
+    }
+
+    // 3. Find receiver user
+    const receiverUser = await User.findOne({
+      username: toUsername.toLowerCase(),
+    });
+
+    if (!receiverUser) {
+      return res.status(404).json({
+        message: "Receiver not found",
+      });
+    }
+
+    // 4. Prevent self-transfer
+    if (receiverUser._id.toString() === senderId.toString()) {
+      return res.status(400).json({
+        message: "You cannot transfer money to yourself",
+      });
+    }
+
+    // 5. Find receiver wallet
+    const receiverWallet = await Wallet.findOne({
+      user: receiverUser._id,
+    });
+
+    if (!receiverWallet) {
+      return res.status(404).json({
+        message: "Receiver wallet not found",
+      });
+    }
+
+    // 6. Check balance
+    if (senderWallet.balance < amount) {
+      return res.status(400).json({
+        message: "Insufficient balance",
+      });
+    }
+
+    // 7. Update balances
+    senderWallet.balance -= amount;
+    receiverWallet.balance += amount;
+
+    await senderWallet.save();
+    await receiverWallet.save();
+
+    // 8. Record transactions
+    await Transaction.create([
+      {
+        user: senderId,
+        type: "debit",
+        amount,
+        description: `Transfer to ${toUsername}: ${description}`,
+      },
+      {
+        user: receiverUser._id,
+        type: "credit",
+        amount,
+        description: `Transfer from ${req.user.username}: ${description}`,
+      },
+    ]);
+
+    return res.status(200).json({
+      message: "Transfer successful",
+      balance: senderWallet.balance,
+    });
+  } catch (error) {
+    console.error("Transfer error:", error);
+    return res.status(500).json({
+      message: "Server error",
+    });
+  }
+};
+
 module.exports = {
   getWalletBalance,
   fundWallet,
+  transferWallet,
 };
