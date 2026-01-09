@@ -1,5 +1,8 @@
 const Wallet = require("../models/Wallet");
-const { initializePayment } = require("../services/paystack.services");
+const {
+  initializePayment,
+  verifyPayment,
+} = require("../services/paystack.services");
 
 const getWalletBalance = async (req, res) => {
   try {
@@ -237,10 +240,68 @@ const initiatePaystackFunding = async (req, res) => {
   }
 };
 
+const verifyPaystackPayment = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { reference } = req.body;
+
+    if (!reference) {
+      return res.status(400).json({
+        message: "Payment reference is required",
+      });
+    }
+
+    //to verify payment with Paystack
+    const verification = await verifyPayment(reference);
+
+    if (verification.data.status !== "success") {
+      return res.status(400).json({
+        message: "Payment not successful",
+      });
+    }
+
+    const amountPaid = verification.data.amount / 100;
+
+    //to find the user's wallet
+    const wallet = await Wallet.findOne({ user: userId });
+
+    if (!wallet) {
+      return res.status(404).json({
+        message: "Wallet not found",
+      });
+    }
+
+    // to credit the wallet
+    wallet.balance += amountPaid;
+    await wallet.save();
+
+    // to record the transaction
+    await Transaction.create({
+      user: userId,
+      type: "credit",
+      amount: amountPaid,
+      description: "Wallet funding via Paystack",
+    });
+    return res.status(200).json({
+      message: "Wallet funded successfully",
+      balance: wallet.balance,
+    });
+  } catch (error) {
+    console.error(
+      "Paystack verification error:",
+      error.response?.data || error
+    );
+    return res.status(500).json({
+      message: "Unable to verify payment",
+    });
+  }
+};
+
 module.exports = {
   getWalletBalance,
   fundWallet,
   transferWallet,
   getTransactionHistory,
   initiatePaystackFunding,
+  verifyPaystackPayment,
 };

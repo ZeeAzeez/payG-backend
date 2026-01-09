@@ -20,6 +20,19 @@ const initializePayment = async ({ email, amount }) => {
   return response.data;
 };
 
+const verifyPayment = async (reference) => {
+  const response = await axios.get(
+    `${PAYSTACK_BASE_URL}/transaction/verify/${reference}`,
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+      },
+    }
+  );
+  return response.data;
+};
+
 module.exports = {
   initializePayment,
+  verifyPayment,
 };
