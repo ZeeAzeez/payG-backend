@@ -168,11 +168,31 @@ const getTransactionHistory = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    const transactions = await Transaction.find({ user: userId }).sort({
-      createdAt: -1,
-    });
+    // pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // added filtering
+    const { type } = req.query;
+
+    const filter = { user: userId };
+
+    if (type === "credit" || type === "debit") {
+      filter.type = type;
+    }
+
+    const transactions = await Transaction.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Transaction.countDocuments(filter);
 
     return res.status(200).json({
+      page,
+      limit,
+      total,
       count: transactions.length,
       transactions,
     });

@@ -12,7 +12,6 @@ app.use(express.json());
 // routes
 app.use("/api/auth", authRoutes);
 
-// health check
 app.get("/", (req, res) => {
   res.json({ message: "PayG API running" });
 });
