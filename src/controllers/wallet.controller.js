@@ -1,4 +1,5 @@
 const Wallet = require("../models/Wallet");
+const { initializePayment } = require("../services/paystack.services");
 
 const getWalletBalance = async (req, res) => {
   try {
@@ -204,9 +205,42 @@ const getTransactionHistory = async (req, res) => {
   }
 };
 
+const initiatePaystackFunding = async (req, res) => {
+  try {
+    const user = req.user;
+    const { amount } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        message: "Amount is required",
+      });
+    }
+
+    const paystackResponse = await initializePayment({
+      email: user.email,
+      amount,
+    });
+
+    return res.status(200).json({
+      message: "Payment initialized",
+      authorization_url: paystackResponse.data.authorization_url,
+      reference: paystackResponse.data.reference,
+    });
+  } catch (error) {
+    console.error(
+      "Paystack initialization error:",
+      error.response?.data || error
+    );
+    return res.status(500).json({
+      message: "Unable to initialize payment",
+    });
+  }
+};
+
 module.exports = {
   getWalletBalance,
   fundWallet,
   transferWallet,
   getTransactionHistory,
+  initiatePaystackFunding,
 };
