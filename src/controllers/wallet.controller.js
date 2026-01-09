@@ -78,14 +78,13 @@ const transferWallet = async (req, res) => {
     const senderId = req.user._id;
     const { toUsername, amount, description } = req.body;
 
-    // 1. Basic validation
     if (!toUsername || !amount || amount <= 0 || !description) {
       return res.status(400).json({
         message: "toUsername, amount and description are required",
       });
     }
 
-    // 2. Find sender wallet
+    // to find the sender's wallet
     const senderWallet = await Wallet.findOne({ user: senderId });
 
     if (!senderWallet) {
@@ -94,7 +93,7 @@ const transferWallet = async (req, res) => {
       });
     }
 
-    // 3. Find receiver user
+    //to find receiver user
     const receiverUser = await User.findOne({
       username: toUsername.toLowerCase(),
     });
@@ -105,14 +104,14 @@ const transferWallet = async (req, res) => {
       });
     }
 
-    // 4. Prevent self-transfer
+    //to prevent self-transfer
     if (receiverUser._id.toString() === senderId.toString()) {
       return res.status(400).json({
         message: "You cannot transfer money to yourself",
       });
     }
 
-    // 5. Find receiver wallet
+    // to find receiver wallet
     const receiverWallet = await Wallet.findOne({
       user: receiverUser._id,
     });
@@ -123,21 +122,21 @@ const transferWallet = async (req, res) => {
       });
     }
 
-    // 6. Check balance
+    // to check balance
     if (senderWallet.balance < amount) {
       return res.status(400).json({
         message: "Insufficient balance",
       });
     }
 
-    // 7. Update balances
+    // to update balances
     senderWallet.balance -= amount;
     receiverWallet.balance += amount;
 
     await senderWallet.save();
     await receiverWallet.save();
 
-    // 8. Record transactions
+    // to record transactions
     await Transaction.create([
       {
         user: senderId,
@@ -165,8 +164,29 @@ const transferWallet = async (req, res) => {
   }
 };
 
+const getTransactionHistory = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const transactions = await Transaction.find({ user: userId }).sort({
+      createdAt: -1,
+    });
+
+    return res.status(200).json({
+      count: transactions.length,
+      transactions,
+    });
+  } catch (error) {
+    console.error("Transaction history error:", error);
+    return res.status(500).json({
+      message: "Server error",
+    });
+  }
+};
+
 module.exports = {
   getWalletBalance,
   fundWallet,
   transferWallet,
+  getTransactionHistory,
 };
