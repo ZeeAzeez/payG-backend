@@ -7,6 +7,7 @@ const {
   fundWallet,
   transferWallet,
   getTransactionHistory,
+  initiatePaystackFunding,
 } = require("../controllers/wallet.controller");
 
 //this collects the wallet balance
@@ -17,5 +18,7 @@ router.post("/fund", authMiddleware, fundWallet);
 router.post("/transfer", authMiddleware, transferWallet);
 // for checking transaction history
 router.get("/transactions", authMiddleware, getTransactionHistory);
+//paystack initializatin
+router.post("/fund/paystack", authMiddleware, initiatePaystackFunding);
 
 module.exports = router;
