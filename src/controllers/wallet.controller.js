@@ -60,6 +60,7 @@ const fundWallet = async (req, res) => {
       type: "credit",
       amount,
       description,
+      reference,
     });
 
     //to Respond to the client

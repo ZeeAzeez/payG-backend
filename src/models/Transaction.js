@@ -23,6 +23,12 @@ const transactionSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+
+    reference: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
   },
   {
     timestamps: true,
