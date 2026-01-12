@@ -7,7 +7,8 @@ const initializePayment = async ({ email, amount }) => {
     `${PAYSTACK_BASE_URL}/transaction/initialize`,
     {
       email,
-      amount: amount * 100, // Paystack expects amount in kobo
+      amount: amount * 100,
+      callback_url: "http://localhost:3000/dashboard",
     },
     {
       headers: {
